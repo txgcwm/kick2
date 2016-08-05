@@ -1,5 +1,6 @@
 
-#include <sstream>
+#include <cstdio>
+#include <cstdlib>
 
 #include <assert.h>
 #include <netdb.h>
@@ -8,20 +9,33 @@
 #include "http_parser_ext.h"
 #include "http_helper.h"
 
+#define HEADER_MAX_LENGTH 1024
+
 std::string HttpHelper::BuildGetReq(const std::string &url)
 {
     HttpParser parser;
     Url parsedUrl;
-    parser.ParseUrl(url, parsedUrl);
-    std::stringstream buf;
-    buf << "GET " << parsedUrl.ToUri() << " HTTP/1.0\r\n"
-        << "User-Agent: kick2\r\n"
-        << "\r\n";
-    return buf.str();
+    parser.ParseUrl(url, parsedUrl);    
+    char buf[HEADER_MAX_LENGTH] = { 0 };
+    snprintf(buf, sizeof(buf), "GET %s HTTP/1.0\r\n"
+        "User-Agent: kick2\r\n"
+        "Connection: close\r\n"
+        "Host: %s\r\n"
+        "\r\n", parsedUrl.ToUri().c_str(), parsedUrl.Host.c_str());
+    return std::string(buf);
 }
 std::string HttpHelper::BulidPostReq(const std::string &url, const std::string &data)
 {
-    return "";
+    HttpParser parser;
+    Url parsedUrl;
+    parser.ParseUrl(url, parsedUrl);
+    char buf[HEADER_MAX_LENGTH] = { 0 };
+    snprintf(buf, sizeof(buf), "POST %s HTTP/1.0\r\n"
+        "User-Agent: kick2\r\n"
+        "Connection: close\r\n"
+        "Host: %s\r\n"
+        "\r\n", parsedUrl.ToUri().c_str(), parsedUrl.Host.c_str());
+    return std::string(buf) + data;
 }
 
 bool HttpHelper::IsDomain(const char *host)
@@ -42,13 +56,13 @@ bool HttpHelper::IsDomain(const char *host)
 
 unsigned long HttpHelper::Resolve(const char * domain)
 {
-    Socket::Init();
     struct hostent *hptr = NULL;
     struct sockaddr_in addr;
-    hptr = gethostbyname(domain);
-    Socket::Uninit();
-
-    if (NULL == hptr)
+    struct hostent hostinfo, *host;
+    char    buf[1024];
+    int ret;
+    int result = gethostbyname_r(domain, &hostinfo, buf, sizeof(buf), &host, &ret);
+    if (-1 == result)
     {
         return 0;
     }
@@ -57,7 +71,6 @@ unsigned long HttpHelper::Resolve(const char * domain)
     case AF_INET:
     case AF_INET6:
         memcpy(&addr.sin_addr.s_addr, hptr->h_addr_list[0], hptr->h_length);
-        //inet_ntop(hptr->h_addrtype, *pptr, str, sizeof(str));
         return addr.sin_addr.s_addr;
 
     default:

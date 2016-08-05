@@ -21,7 +21,9 @@ static struct option longopts[] = {
     { "threads",             required_argument, NULL, 't' },
     { "launch-interval",     required_argument, NULL, 'l' },
     { "script",              required_argument, NULL, 's' },
+    { "debug",               no_argument,       NULL, 'D' },
     { "hls",                 no_argument,       NULL, 'H' },
+    { "multicast",           no_argument,       NULL, 'm' },
     { "timeout",             required_argument, NULL, 'T' },
     { "help",                no_argument,       NULL, 'h' },
     { "version",             no_argument,       NULL, 'v' },
@@ -32,28 +34,35 @@ static void usage() {
     printf("Usage: kick2 <options> <url>                                   \n"
         "  Options:                                                        \n"
         "    -c, --concurrency        Concurrencys to keep open            \n"
-        "    -d, --duration           Duration of test                     \n"
-        "    -t, --threads            Number of threads to use             \n"
-        "                                                                  \n"
+        //"    -d, --duration           Duration of test                     \n"
+        //"    -t, --threads            Number of threads to use             \n"
+        //"                                                                  \n"
+        "    -D, --debug              save debug log and response file     \n"
         "    -s, --script             Load script file with request urls   \n"
         "    -l, --launch-interval    Launch a new task interval           \n"
         "    -H, --hls                Launch hls load test                 \n"
-        "    -T, --timeout            Socket/request timeout               \n"
+        "    -m, --multicast          Launch multicast receiver [debug]    \n"
+        //"    -T, --timeout            Socket/request timeout               \n"
         "    -v, --version            Print version details                \n");
 }
 
 int parseArgs(int argc, char **argv, Config &config)
 {
-    config.Duration = 0;
-    config.ThreadNum = 1;
+    config.Timeout        = 1000;
+    config.Duration       = 0;
+    config.ThreadNum      = 1;
     config.LaunchInterval = 10;
-    config.Timeout = 1000;
+    
+    config.ReqType = HTTP_LOAD;
+    config.IsDebug = false;
+    config.Concurrency = 0;
 
     int c;
-    while ((c = getopt_long(argc, argv, "c:t:d:l:s:H:T:h:v?", longopts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "c:t:d:l:s:T:HDhv?", longopts, NULL)) != -1) {
         switch (c) {
         case 'c':
-            config.Concurrency = STR::Str2UInt64(optarg);
+            if(!config.IsDebug)
+                config.Concurrency = STR::Str2UInt64(optarg);
             break;
         case 'd':
             config.Duration = STR::Str2UInt64(optarg);
@@ -73,6 +82,16 @@ int parseArgs(int argc, char **argv, Config &config)
         case 'v':
             printf("kick2 %s [%s] ", VERSION, aeGetApiName());
             printf("Copyright (C) 2016 Bonbon\n");
+            break;
+        case 'H':
+            config.ReqType = HLS_LOAD;
+            break;
+        case 'm':
+            config.ReqType = MULTICAST;
+            break;
+        case 'D':
+            config.IsDebug = true;
+            config.Concurrency = 1;
             break;
         case 'h':
         case '?':
@@ -102,7 +121,6 @@ int main(int argc, char **argv)
     if (!config.Url.empty())
     {
         playUrls.push_back(config.Url);
-        config.Concurrency = 0;
     }
     else
     {
@@ -119,13 +137,27 @@ int main(int argc, char **argv)
         while (getline(buf, line))
         {
             playUrls.push_back(line);
-        }
-        config.Concurrency = playUrls.size();
+            if (config.IsDebug)
+                break;
+        }        
     }
 
     Kick2 *kick = new Kick2();
     kick->Initialize(config);
-    kick->LaunchHlsLoad(playUrls);
+
+    switch (config.ReqType)
+    {
+    case HTTP_LOAD:
+        kick->LaunchHttpLoad(playUrls);
+        break;
+
+    case HLS_LOAD:
+        kick->LaunchHlsLoad(playUrls);
+        break;
+
+    case MULTICAST:
+        break;
+    }
 
     return 0;
 }

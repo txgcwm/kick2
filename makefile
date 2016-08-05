@@ -13,6 +13,7 @@ ALL_INC = -I ./include \
 ALL_OBJ = ./http_parser.o \
           ./http_parser_ext.o \
 		  ./zmalloc.o \
+		  ./mem_pool.o \
 		  ./ae.o \
 		  ./thread.o \
 		  ./datetime.o \
@@ -22,13 +23,13 @@ ALL_OBJ = ./http_parser.o \
 		  ./http_helper.o \
 		  ./http_client.o \
 		  ./string_helper.o \
-		  ./kick2.o \
-          ./main.o
+		  ./kick2.o
 
 all: kick2
-kick2: ${ALL_OBJ}
-	${CC} -o kick2 ${CFLAGS} $(ALL_OBJ)
-	rm -f $(ALL_OBJ)
+kick2: ${ALL_OBJ} main.o unit_test.o
+	${CC} -o kick2 ${CFLAGS} $(ALL_OBJ) main.o
+	${CC} -o test_kick2 ${CFLAGS} $(ALL_OBJ) unit_test.o
+	rm -f $(ALL_OBJ)  main.o unit_test.o
 
 http_parser.o:                       ./reference/http_parser.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./reference/http_parser.c
@@ -38,6 +39,9 @@ http_parser_ext.o:                   ./include/http_parser_ext.h
 
 zmalloc.o:                           ./reference/zmalloc.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./reference/zmalloc.c
+
+mem_pool.o:                          ./include/mem_pool.h
+	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/mem_pool.cpp
 
 ae.o:                                ./reference/ae.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./reference/ae.c
@@ -71,6 +75,9 @@ kick2.o:                             ./include/kick2.h
 
 main.o:
 	${CC} -c ${CFLAGS} ${ALL_INC}    ./src/main.cpp
+
+unit_test.o:
+	${CC} -c ${CFLAGS} ${ALL_INC}    ./src/unit_test.cpp
 
 clean: 
 	rm -f ${ALL_OBJ}    ./kick2

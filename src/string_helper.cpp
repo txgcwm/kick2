@@ -1,6 +1,7 @@
 
 #include <cstring>
-#include <sstream>
+#include <cstdio>
+#include <cstdlib>
 
 #include "common.h"
 #include "string_helper.h"
@@ -62,17 +63,13 @@ std::string STR::Trim(const std::string &source, const std::string separators)
 
 std::string STR::ToString(long long value)
 {
-    std::stringstream buf;
-    buf << value;
-    return buf.str();
+    char buf[21] = { 0 };
+    snprintf(buf, sizeof(buf), "%lld", value);
+    return std::string(buf);
 }
 
-size_t STR::Str2UInt64(std::string value)
+uint64_t STR::Str2UInt64(std::string value)
 {
-    std::stringstream buf;
-    buf << value;
-    size_t result;
-    buf >> result;
-    return result;
+    return atoll(value.c_str());
 }
 

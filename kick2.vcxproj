@@ -143,6 +143,7 @@
     <ClCompile Include="src\http_parser_ext.cpp" />
     <ClCompile Include="src\kick2.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\mem_pool.cpp" />
     <ClCompile Include="src\socket.cpp" />
     <ClCompile Include="src\string_helper.cpp" />
     <ClCompile Include="src\thread.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="include\http_parser_ext.h" />
     <ClInclude Include="include\kick2.h" />
     <ClInclude Include="include\log.h" />
+    <ClInclude Include="include\mem_pool.h" />
     <ClInclude Include="include\socket.h" />
     <ClInclude Include="include\string_helper.h" />
     <ClInclude Include="include\thread.h" />

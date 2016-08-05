@@ -12,13 +12,18 @@ using namespace std;
 class HttpParser
 {
 public:
+    void Initialize();
     static int ParseUrl(const string &url, Url &httpUrl);
+    size_t ParseMsg(const char *buf, size_t len, enum http_parser_type type, HttpMsg &httpMsg);
 
 private:
-    static size_t ParseReq(const char *buf, size_t len, HttpMsg &httpMsg);
-    static size_t ParseResp(const char *buf, size_t len, HttpMsg &httpMsg);
-
-public:
-    static size_t ParseReqHeader(const char *buf, size_t len, HttpMsg &httpMsg);
-    static size_t ParseRespHeader(const char *buf, size_t len, HttpMsg &httpMsg);
+    http_parser_settings m_settings;
 };
+
+int request_uri(http_parser *parser, const char *at, size_t len);
+int header_filed(http_parser *parser, const char *at, size_t len);
+int header_value(http_parser *parser, const char *at, size_t len);
+int header_complete(http_parser *parser);
+int body(http_parser *parser, const char *at, size_t len);
+int message_complete(http_parser *parser);
+

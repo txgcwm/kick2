@@ -9,14 +9,20 @@
 #include "http_helper.h"
 #include "hls_handler.h"
 
-uint64_t HlsTask::Counter = 10000;
+uint64_t HlsTask::Concurrency = 0;
 
 HlsTask::HlsTask(std::string playUrl, uint64_t now, HttpClient *client)
-    :TaskId(Counter++),PlayUrl(playUrl), StartMoment(0), NextMoment(0),
+    :TaskId(0),PlayUrl(playUrl), StartMoment(0), NextMoment(0),
     Client(client), IsEndlist(false), NeedSave(false)
 {
     StartMoment = DateTime::UnixTimeMs();
     NextMoment = StartMoment;
+    ++Concurrency;
+}
+
+HlsTask::~HlsTask()
+{
+    --Concurrency;
 }
 
 HlsHandler::HlsHandler(AeEngine *engine)
@@ -28,9 +34,6 @@ void HlsHandler::Handle(Connection *connection, HttpClient *client, void *userDa
     HttpMsg &response = *connection->Response;
     HlsTask *task = (HlsTask *)userData;
     assert(task);
-    //DEBUG_LOG("HlsHandler::OnResponse(), "
-    //    "Content-Type: " << response.Headers.at(string(HTTP_HEADER_CONTENT_TYPE)) <<
-    //    "Content-Length:" << response.Headers.at(string(HTTP_HEADER_CONTENT_LENGTH)));
 
     if (response.StatusCode == 404)
     {
@@ -53,7 +56,7 @@ int HlsHandler::HandleM3u8Resp(Connection *connection, HttpClient *client, HlsTa
 {
     HttpMsg &response = *connection->Response;
     M3u8Info m3u8Info;
-    ParseM3u8(response.Buf + response.Body.Offset, response.Body.Length, m3u8Info);
+    ParseM3u8(*response.Buf, m3u8Info);
     task->IsEndlist = m3u8Info.IsEndlist;
 
     list<SegmentInfo>::iterator item = m3u8Info.Sources.begin();
@@ -94,20 +97,22 @@ int HlsHandler::HandleM3u8Resp(Connection *connection, HttpClient *client, HlsTa
     }
     return 0;
 }
-int HlsHandler::ParseM3u8(const char *buf, size_t len, M3u8Info &m3u8Info)
+int HlsHandler::ParseM3u8(const Block &buffer, M3u8Info &m3u8Info)
 {
-    if (strncmp(buf, "#EXTM3U", 7) != 0)
+    const char *found = strstr(buffer.Data, "#EXTM3U");
+    if (found == NULL)
     {
         return -1;
     }
-
-    string content = string(buf, len);
+    string content = string(buffer.Data, buffer.Size);
     string strBuf = STR::GetKeyValue(content, "#EXT-X-VERSION:", "\n");
     m3u8Info.Version = STR::Str2UInt64(strBuf);
     strBuf = STR::GetKeyValue(content, "#EXT-X-MEDIA-SEQUENCE:", "\n");
     m3u8Info.Sequence = STR::Str2UInt64(strBuf);
 
-    const char *pos = buf;
+    const Block *block = &buffer;
+    const char *pos = found;
+    size_t readLen = 0;
     while (*pos != 0x0)
     {
         string line;
@@ -147,22 +152,27 @@ int HlsHandler::ParseM3u8(const char *buf, size_t len, M3u8Info &m3u8Info)
         {
             m3u8Info.IsEndlist = true;
         }
-        if (!next || next - buf == (long)len - 1)
-            break;
-        else
+        if (!next || next - block->Data == block->Size - 1)
         {
-            while (*next == '\r' || *next == '\n')
+            if (block->Next)
             {
-                ++next;
+                readLen += block->Size;
+                block = block->Next;
+                next = block->Data;
             }
-            pos = next;
+            else
+                break;
         }
+        while (*next == '\r' || *next == '\n')
+            ++next;
+        pos = next;
     }
     return 0;
 }
 
 int HlsHandler::HandleSegmentResp(Connection *connection, HttpClient *client, HlsTask *task)
 {
+    DEBUG_LOG("HlsHandler::HandleSegmentResp(), uri: "<<connection->Request->Uri);
     std::string resourceName = STR::GetRKeyValue(connection->Request->Uri, "/", "?");
     std::string fileName = std::string("./") + resourceName;
     DEBUG_LOG("[TaskId:" << task->TaskId << "] HlsHandler::Handle(), "
@@ -206,4 +216,5 @@ void HlsHandler::OnTaskComplete(HlsTask *task)
 {
     DEBUG_LOG("[TaskId:" << task->TaskId << "] HlsHandler::OnTaskComplete(), "
         "task has finished, original url: " << task->PlayUrl);
+    delete task;
 }

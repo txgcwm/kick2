@@ -39,24 +39,30 @@ struct Url
 
 struct HttpBody
 {
-    uint32_t Offset;
+    uint64_t Offset;
     uint64_t Length;
     HttpBody()
         :Offset(0), Length(0) {}
 };
 
+class Block;
 struct HttpMsg
 {
     std::string Method;
     std::string Uri;
     std::string HttpVersion;
     uint32_t StatusCode;
+    
+    unsigned int State : 8;
+    std::string HeaderFiled;
     std::map<std::string, std::string> Headers;
     HttpBody Body;
-    char *Buf;
-    uint64_t BufCapacity;
+    Block *Buf;
+    uint64_t ContentLength;
+    uint64_t Length;
     HttpMsg()
-        :Method(), Uri(), HttpVersion(), StatusCode(), Body(), Buf(NULL), BufCapacity(0) {}
+        :Method(), Uri(), HttpVersion(), StatusCode(), State(0), Body(), 
+        ContentLength(0), Length(0) {}
 };
 
 struct Connection

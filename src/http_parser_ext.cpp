@@ -1,11 +1,21 @@
 
-#include <sstream>
+#include <cstdio>
 
-#include "common.h"
-#include "string_helper.h"
 #include "http_parser_ext.h"
+#include "mem_pool.h"
 
 using namespace std;
+
+void HttpParser::Initialize()
+{
+    memset(&m_settings, 0, sizeof(m_settings));
+    m_settings.on_url = request_uri;
+    m_settings.on_header_field = header_filed;
+    m_settings.on_header_value = header_value;
+    m_settings.on_headers_complete = header_complete;
+    m_settings.on_body = body;
+    m_settings.on_message_complete = message_complete;
+}
 
 int HttpParser::ParseUrl(const string &url, Url &httpUrl)
 {
@@ -36,78 +46,57 @@ int HttpParser::ParseUrl(const string &url, Url &httpUrl)
     return 0;
 }
 
-size_t HttpParser::ParseReq(const char *buf, size_t len, HttpMsg &httpMsg)
+size_t HttpParser::ParseMsg(const char *buf, size_t len, enum http_parser_type type, HttpMsg &httpMsg)
 {
-    http_parser_settings settings;
-    memset(&settings, 0, sizeof(settings));
     http_parser parser;
-    http_parser_init(&parser, HTTP_REQUEST);
-    parser.data = NULL;
-    size_t parsed = http_parser_execute(&parser, &settings, buf, len);
-    httpMsg.Method = http_method_str((http_method)parser.method);
-    stringstream stringBuf;
-    stringBuf << "http/" << parser.http_major << "." << parser.http_minor;
-    httpMsg.HttpVersion = stringBuf.str();
-    //httpMsg.Body.Length = parser.content_length;
+    http_parser_init(&parser, type);
+    parser.data = &httpMsg;
+    size_t parsed = http_parser_execute(&parser, &m_settings, buf, len);
+    httpMsg.State = parser.state;
     return parsed;
 }
 
-size_t HttpParser::ParseResp(const char *buf, size_t len, HttpMsg &httpMsg)
-{
-    http_parser_settings settings;
-    memset(&settings, 0, sizeof(settings));
-    http_parser parser;
-    http_parser_init(&parser, HTTP_RESPONSE);
-    parser.data = NULL;
-    size_t parsed = http_parser_execute(&parser, &settings, buf, len);
-    stringstream stringBuf;
-    stringBuf << "http/" << parser.http_major << "." << parser.http_minor;
-    httpMsg.HttpVersion = stringBuf.str();
-    httpMsg.StatusCode = parser.status_code;
-    //httpMsg.Body.Length = parser.content_length;
-    return parsed;
+int request_uri(http_parser *parser, const char *at, size_t len) {
+    HttpMsg *msg = (HttpMsg *)parser->data;
+    msg->Uri = std::string(at, len);
+    return 0;
 }
 
-size_t HttpParser::ParseReqHeader(const char *buf, size_t len, HttpMsg &httpMsg)
-{
-    size_t parsed = ParseReq(buf, len, httpMsg);
-    const char *pos = strstr(buf, "\r\n") + 2;
-    string line = string(buf, pos - buf - 2);
-    httpMsg.Uri = STR::GetKeyValue(line, " ", " ");
-    while (strncmp(pos,"\r\n",2))
-    {
-        const char *next = strstr(pos, "\r\n");
-        string line = string(pos, next - pos);
-        string key = STR::GetKeyValue(line, "", ":");
-        string value = STR::Trim(STR::GetKeyValue(line, ":", "")," \r\n");
-        httpMsg.Headers.insert(pair<string, string>(key, value));
-        if (key == HTTP_HEADER_CONTENT_LENGTH)
-        {
-            httpMsg.Body.Length = STR::Str2UInt64(value);
-        }
-        pos = next + 2;
-    }
-    httpMsg.Body.Offset = pos - buf + 2;
-    return parsed;
+int header_filed(http_parser *parser, const char *at, size_t len) {    
+    HttpMsg *httpMsg = (HttpMsg *)parser->data;
+    httpMsg->HeaderFiled = std::string(at, len);
+    return 0;
 }
 
-size_t HttpParser::ParseRespHeader(const char *buf, size_t len, HttpMsg &httpMsg)
-{
-    size_t parsed = ParseResp(buf, len, httpMsg);
-    const char *pos = strstr(buf, "\r\n") + 2;
-    while (strncmp(pos, "\r\n", 2))
-    {
-        const char *next = strstr(pos, "\r\n");
-        string line = string(pos, next - pos);
-        string key = STR::GetKeyValue(line, "", ":");
-        string value = STR::Trim(STR::GetKeyValue(line, ":", ""), " \r\n");
-        httpMsg.Headers.insert(pair<string, string>(key, value));
-        if (key == HTTP_HEADER_CONTENT_LENGTH)
-        {
-            httpMsg.Body.Length = STR::Str2UInt64(value);
-        }
-        pos = next + 2;
-    }
-    httpMsg.Body.Offset = pos - buf + 2;
-    return parsed;
+int header_value(http_parser *parser, const char *at, size_t len) {
+    HttpMsg *httpMsg = (HttpMsg *)parser->data;
+    std::string key = httpMsg->HeaderFiled;
+    std::string value = std::string(at, len);
+    httpMsg->Headers.insert(pair<string, string>(key, value));
+    return 0;
+}
+
+int header_complete(http_parser *parser) {
+    HttpMsg *httpMsg = (HttpMsg *)parser->data;
+    httpMsg->ContentLength = parser->content_length;
+    char buf[9] = { 0 };
+    snprintf(buf, 9, "http/%d.%d", parser->http_major, parser->http_minor);
+    httpMsg->HttpVersion = buf;
+    if (parser->type == HTTP_REQUEST)
+        httpMsg->Method = http_method_str((http_method)parser->method);
+    else if (parser->type == HTTP_RESPONSE)
+        httpMsg->StatusCode = parser->status_code;
+    return 0;
+}
+
+int body(http_parser *parser, const char *at, size_t len) {
+    HttpMsg *msg = (HttpMsg *)parser->data;
+    msg->Body.Offset = at - msg->Buf->Data;
+    msg->Body.Length = len;
+    msg->Length = msg->Body.Offset + msg->ContentLength;
+    return 0;
+}
+
+int message_complete(http_parser *parser) {
+    return 0;
 }

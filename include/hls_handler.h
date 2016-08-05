@@ -5,6 +5,7 @@
 #include <list>
 #include <inttypes.h>
 
+#include "mem_pool.h"
 #include "ae_engine.h"
 #include "http_client.h"
 
@@ -42,14 +43,12 @@ struct HlsTask
     uint64_t StartMoment;
     uint64_t NextMoment;
     std::list<SegmentInfo> TaskQueue;
-    //std::list<SegmentInfo> CompletedQueue;
     HttpClient *Client;
     bool IsEndlist;
     bool NeedSave;
+    static uint64_t Concurrency;
     HlsTask(std::string playUrl, uint64_t now, HttpClient *client);
-
-private:
-    static uint64_t Counter;
+    ~HlsTask();
 };
 
 class HlsHandler : public ITimerEvent, public IHttpHandler
@@ -66,7 +65,7 @@ public:
 private:
     int HandleM3u8Resp(Connection *connection, HttpClient *client, HlsTask *task);
     int HandleSegmentResp(Connection *connection, HttpClient *client, HlsTask *task);
-    int ParseM3u8(const char *buf, size_t len, M3u8Info &m3u8Info);
+    int ParseM3u8(const Block &buffer, M3u8Info &m3u8Info);
 
 private:
     AeEngine *m_engine;

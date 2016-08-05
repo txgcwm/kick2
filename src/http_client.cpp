@@ -8,6 +8,7 @@
 #include "config.h"
 
 #include "log.h"
+#include "mem_pool.h"
 #include "http_client.h"
 #include "http_helper.h"
 #include "string_helper.h"
@@ -17,13 +18,50 @@ void HttpRespHandler::Handle(Connection *connection, HttpClient *client, void *u
     HttpMsg &response = *connection->Response;
     DEBUG_LOG("HttpRespHandler::Handle(), "
         "Content-Type: " << response.Headers.at(string(HTTP_HEADER_CONTENT_TYPE)) << 
-        " buf: " << (void *)response.Buf << ", "
+        " buf: " << (void *)response.Buf->Data << ", "
         "Content-Length:" << response.Headers.at(string(HTTP_HEADER_CONTENT_LENGTH)));
 }
 
-HttpClient::HttpClient(AeEngine *engine)
-    :m_engine(engine), m_defaultHander(NULL)
-{}
+ConnectionPool::ConnectionPool()
+{
+    memset(&m_mutex, 0, sizeof(m_mutex));
+}
+
+SOCKET ConnectionPool::GetConnection(const char *host, uint16_t port)
+{
+    std::string addr = std::string(host) + STR::ToString(port);
+    SOCKET socket;
+    pthread_mutex_lock(&m_mutex);
+    if (m_pool.find(addr) == m_pool.end() || m_pool[addr].empty())
+        socket = HttpClient::Connect(host, port);
+    else
+    {
+        socket = m_pool[addr].front();
+        m_pool[addr].pop_front();
+    }
+    pthread_mutex_unlock(&m_mutex);
+    return socket;
+}
+void ConnectionPool::Free(const char *host, uint16_t port, SOCKET socket)
+{
+    std::string addr = std::string(host) + STR::ToString(port);
+    Socket(socket).Close();
+    //pthread_mutex_lock(&m_mutex);
+    //if (m_pool.find(addr) == m_pool.end())
+    //    m_pool[addr] = std::list<SOCKET>(1, socket);
+    //else
+    //{
+    //    m_pool[addr].push_back(socket);
+    //}
+    //pthread_mutex_unlock(&m_mutex);
+}
+
+HttpClient::HttpClient(AeEngine *engine, MemPool *memPool, ConnectionPool *connectionPool)
+    :m_engine(engine), m_memPool(memPool), m_connectionPool(connectionPool), m_parser(NULL), m_defaultHander(NULL)
+{
+    m_parser = new HttpParser();
+    m_defaultHander = new HttpRespHandler();
+}
 HttpClient::~HttpClient()
 {
     if (m_defaultHander != NULL)
@@ -35,7 +73,7 @@ HttpClient::~HttpClient()
 
 void HttpClient::Initialize()
 {
-    m_defaultHander = new HttpRespHandler();
+    m_parser->Initialize();    
     RegisterHandler(string(MIME_DEFAULT), m_defaultHander);
 }
 
@@ -60,16 +98,24 @@ int HttpClient::SendGetReq(const std::string &fullUrl, void *userData)
 int HttpClient::SendMsg(const char *host, uint16_t port, const char *buf, uint64_t len, void *userData)
 {
     HttpMsg *request = new HttpMsg();
-    HttpParser parser;
-    parser.ParseReqHeader(buf, len, *request);
+    m_parser->ParseMsg(buf, len, HTTP_REQUEST, *request);
     Connection *connection = new Connection(host, port, request, userData);
 
     int result = 0;
-    SOCKET fd = Connect(host, port);
+    SOCKET fd = m_connectionPool->GetConnection(host, port);
     if (fd >= 0)
     {
         result = Socket(fd).Send(buf, len, 0);
-        DEBUG_LOG("HttpClient::SendMsg(), send request to: " << host << ":" << port << " successfully, msg: \n" << buf);
+        if (result > 0)
+        {
+            DEBUG_LOG("HttpClient::SendMsg(), send request to: " << host << ":" << port << " successfully, "
+                "fd: " << fd << ", result: " << result << ", msg: \n" << buf);
+        }            
+        else
+        {
+            ERROR_LOG("HttpClient::SendMsg(), send request to: " << host << ":" << port << " failed, "
+                "fd: " << fd << ", result: " << result << ", errno: " << errno << ", msg: \n" << buf);
+        }            
         ClientData *data = new ClientData(this, connection);
         m_engine->AddIoEvent(fd, AE_READABLE, data);
     }
@@ -147,47 +193,44 @@ void HttpClient::OnRead(int fd, ClientData *data, int mask)
         if (response == NULL)
         {
             response = new HttpMsg();
-            response->Buf = (char *)zmalloc(RECVBUF + 1);
-            response->BufCapacity = RECVBUF;
-            memset(response->Buf, 0, response->BufCapacity);
+            char buf[RECVBUF + 1] = { 0 };
+            Block *block = new Block(buf, RECVBUF);
+            response->Buf = block;
             connection->Response = response;
         }
-        char *buf = response->Buf + connection->Read;
-        size_t len = response->BufCapacity - connection->Read;
-        ssize_t readSize = read(fd, buf, len);
-        connection->Read += readSize;
-        HttpParser::ParseRespHeader(response->Buf, connection->Read, *response);
-        if (connection->Read == RECVBUF && Socket::IsReadable(fd) > 0)
+        if (response->Length == 0)
         {
-            DEBUG_LOG("create bigger than " << RECVBUF << " new buffer");
-            char *bigBuf = (char *)zmalloc(response->Body.Offset + response->Body.Length + 1);
-            memset(bigBuf, 0, response->Body.Offset + response->Body.Length + 1);
-            memcpy(bigBuf, response->Buf, RECVBUF);
-            zfree(response->Buf);
-            response->Buf = bigBuf;
-            response->BufCapacity = response->Body.Offset + response->Body.Length;            
-            connection->Read += read(fd, response->Buf + connection->Read, response->BufCapacity - connection->Read);
+            connection->Read += ReadToBuffer(*response->Buf, connection->Read, fd, RECVBUF - connection->Read);
+            m_parser->ParseMsg(response->Buf->Data, connection->Read, HTTP_RESPONSE, *response);
+            if (response->Length > RECVBUF)
+            {
+                DEBUG_LOG("HttpClient::OnRead(), shall create bigger than " << RECVBUF << " new buffer");
+                response->Buf->Next = m_memPool->Allocate(response->Length - RECVBUF);
+            }
         }
-
-        if (connection->Read == response->Body.Offset + response->Body.Length)
+        if (response->Length > connection->Read&&Socket::IsReadable(fd))
+            connection->Read += ReadToBuffer(*response->Buf, connection->Read, fd, response->Length - connection->Read);
+        DEBUG_LOG("HttpClient::OnRead(), fd: " << fd << ", "
+            "response: "<<(void *)response<<", read: " << connection->Read << ", length: " << response->Length);
+        if (connection->Read == response->Length || response->State == 1)
         {
             m_engine->DeleteIoEvent(fd, AE_READABLE);
-            Socket(fd).Uninit();
-            Socket(fd).Close();
+            m_connectionPool->Free(connection->Host.c_str(), connection->Port, fd);
 
-            DEBUG_LOG("HttpClient::OnRead(), receive response: \n" << response->Buf);
+            DEBUG_LOG("HttpClient::OnRead(), receive response: \n" << response->Buf->Data);
             HandleResponse(connection);
 
-            zfree(response->Buf);
+            m_memPool->Free(response->Buf->Next);
+            delete response->Buf;
             delete connection->Request;
             delete connection->Response;
             delete connection;
             delete data;
         }
-        
+
     } while (0);
 
-    
+
 }
 
 void HttpClient::OnWrite(int fd, ClientData *data, int mask)
