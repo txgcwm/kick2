@@ -22,7 +22,6 @@ struct IIoEvent
 {
     virtual void OnRead (int fd, ClientData *userData, int mask) = 0;
     virtual void OnWrite(int fd, ClientData *userData, int mask) = 0;
-    virtual void OnError(int fd, ClientData *userData, int mask) = 0;
 };
 
 class ITimerEvent

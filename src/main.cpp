@@ -21,6 +21,7 @@ static struct option longopts[] = {
     { "threads",             required_argument, NULL, 't' },
     { "launch-interval",     required_argument, NULL, 'l' },
     { "script",              required_argument, NULL, 's' },
+    { "interface",           required_argument, NULL, 'i' },
     { "debug",               no_argument,       NULL, 'D' },
     { "hls",                 no_argument,       NULL, 'H' },
     { "multicast",           no_argument,       NULL, 'm' },
@@ -39,6 +40,7 @@ static void usage() {
         //"                                                                  \n"
         "    -D, --debug              save debug log and response file     \n"
         "    -s, --script             Load script file with request urls   \n"
+        "    -i, --interface          Specify the network interface card   \n"
         "    -l, --launch-interval    Launch a new task interval           \n"
         "    -H, --hls                Launch hls load test                 \n"
         "    -m, --multicast          Launch multicast receiver [debug]    \n"
@@ -56,9 +58,10 @@ int parseArgs(int argc, char **argv, Config &config)
     config.ReqType = HTTP_LOAD;
     config.IsDebug = false;
     config.Concurrency = 0;
+    config.Interface = "any";
 
     int c;
-    while ((c = getopt_long(argc, argv, "c:t:d:l:s:T:HDhv?", longopts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "c:t:d:l:s:i:T:HDmhv?", longopts, NULL)) != -1) {
         switch (c) {
         case 'c':
             if(!config.IsDebug)
@@ -78,6 +81,9 @@ int parseArgs(int argc, char **argv, Config &config)
             break;
         case 's':
             config.ScriptFile = optarg;
+            break;
+        case 'i':
+            config.Interface = optarg;
             break;
         case 'v':
             printf("kick2 %s [%s] ", VERSION, aeGetApiName());
@@ -156,6 +162,7 @@ int main(int argc, char **argv)
         break;
 
     case MULTICAST:
+        kick->LaunchMulticastTest(config.Url, config.Interface);
         break;
     }
 

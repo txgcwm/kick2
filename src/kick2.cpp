@@ -7,6 +7,7 @@
 #include "datetime.h"
 #include "http_client.h"
 #include "hls_handler.h"
+#include "multicast_client.h"
 
 uint64_t HttpTask::Counter = 10000;
 
@@ -87,4 +88,12 @@ void Kick2::LaunchHttpLoad(const std::list<std::string> &playUrls)
             url = playUrls.begin();
     }
     m_engine->Wait();
+}
+
+void Kick2::LaunchMulticastTest(const std::string &addr, const std::string &interface)
+{
+    assert(!addr.empty());
+    MulticastClient client(m_engine);
+    if (client.Receive(addr, interface) != -1)
+        m_engine->Wait();
 }

@@ -1,4 +1,6 @@
-#pragma once
+
+#ifndef __HTTP_PARSER_EXT_H__
+#define __HTTP_PARSER_EXT_H__
 
 #include <string>
 #include <cstring>
@@ -27,3 +29,4 @@ int header_complete(http_parser *parser);
 int body(http_parser *parser, const char *at, size_t len);
 int message_complete(http_parser *parser);
 
+#endif

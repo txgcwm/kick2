@@ -15,13 +15,15 @@ ALL_OBJ = ./http_parser.o \
 		  ./zmalloc.o \
 		  ./mem_pool.o \
 		  ./ae.o \
+		  ./ae_engine.o \
 		  ./thread.o \
 		  ./datetime.o \
-		  ./ae_engine.o \
 		  ./socket.o \
 		  ./hls_handler.o \
 		  ./http_helper.o \
 		  ./http_client.o \
+		  ./network_helper.o \
+		  ./multicast_client.o \
 		  ./string_helper.o \
 		  ./kick2.o
 
@@ -46,14 +48,14 @@ mem_pool.o:                          ./include/mem_pool.h
 ae.o:                                ./reference/ae.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./reference/ae.c
 
+ae_engine.o:                         ./include/ae_engine.h
+	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/ae_engine.cpp
+
 thread.o:                            ./include/thread.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/thread.cpp
 
 datetime.o:                          ./include/datetime.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/datetime.cpp
-
-ae_engine.o:                         ./include/ae_engine.h
-	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/ae_engine.cpp
 
 socket.o:                            ./include/socket.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/socket.cpp
@@ -66,6 +68,12 @@ http_helper.o:                       ./include/http_helper.h
 
 http_client.o:                       ./include/http_client.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/http_client.cpp
+
+network_helper.o:                    ./include/network_helper.h
+	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/network_helper.cpp
+
+multicast_client.o:                  ./include/multicast_client.h
+	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/multicast_client.cpp
 
 string_helper.o:                     ./include/string_helper.h
 	$(CC) -c ${CFLAGS} ${ALL_INC}    ./src/string_helper.cpp

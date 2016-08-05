@@ -75,6 +75,12 @@
     <ClCompile Include="src\mem_pool.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\multicast_client.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network_helper.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="reference\ae.h">
@@ -129,6 +135,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\mem_pool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\multicast_client.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network_helper.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

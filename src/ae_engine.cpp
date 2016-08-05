@@ -35,10 +35,6 @@ void aeIoCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int m
 {
     ClientData *data = (ClientData *)clientData;
     IIoEvent *ioCallbacker = (IIoEvent *)data->Callbacker;
-    if (mask&AE_ERR)
-    {
-        ioCallbacker->OnError(fd, data, mask);
-    }
     if (mask&AE_READABLE)
     {
         ioCallbacker->OnRead(fd, data, mask);

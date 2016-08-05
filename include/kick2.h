@@ -24,6 +24,7 @@ struct Config
     enum LodeType ReqType;
     std::string ScriptFile;
     std::string Url;
+    std::string Interface;
     bool IsDebug;
     uint64_t Concurrency;
 };
@@ -53,6 +54,7 @@ public:
     void Initialize(const Config &config);
     void LaunchHttpLoad(const std::list<std::string> &playUrls);
     void LaunchHlsLoad(const std::list<std::string> &playUrls);
+    void LaunchMulticastTest(const std::string &addr, const std::string &interface);
 
 private:
     AeEngine *m_engine;
