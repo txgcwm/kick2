@@ -3,6 +3,7 @@
 #define __KICK2_H__
 
 #include <list>
+#include <vector>
 #include <string>
 #include <inttypes.h>
 
@@ -40,6 +41,7 @@ public:
     HttpClient *Client;
     bool NeedSave;
     HttpTask(std::string url, uint64_t now, HttpClient *client);
+    inline int Launch();
 
 private:
     static uint64_t Counter;
@@ -47,17 +49,23 @@ private:
 
 class MemPool;
 
+struct ThreadInfo
+{
+    AeEngine *Engine;
+    HttpClient *Client;
+};
+
 class Kick2
 {
 public:
     Kick2();
     void Initialize(const Config &config);
-    void LaunchHttpLoad(const std::list<std::string> &playUrls);
+    void LaunchHttpLoad(const std::list<std::string> &urls);
     void LaunchHlsLoad(const std::list<std::string> &playUrls);
     void LaunchMulticastTest(const std::string &addr, const std::string &interface);
 
 private:
-    AeEngine *m_engine;
+    std::vector<ThreadInfo *> m_threads;
     Config    m_config;
     MemPool *m_memPool;
 };

@@ -49,6 +49,8 @@ struct HlsTask
     static uint64_t Concurrency;
     HlsTask(std::string playUrl, uint64_t now, HttpClient *client);
     ~HlsTask();
+
+    inline int Launch() { return Client->SendGetReq(PlayUrl, this); }
 };
 
 class HlsHandler : public ITimerEvent, public IHttpHandler

@@ -33,7 +33,7 @@ public:
 class AeEngine :public Thread
 {
 public:
-    AeEngine();
+    AeEngine(int size);
     ~AeEngine();
 
 private:

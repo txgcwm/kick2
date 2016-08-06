@@ -29,7 +29,7 @@ ConnectionPool::ConnectionPool()
 
 SOCKET ConnectionPool::GetConnection(const char *host, uint16_t port)
 {
-    std::string addr = std::string(host) + STR::ToString(port);
+    std::string addr = std::string(host) + ":" + STR::ToString(port);
     SOCKET socket;
     pthread_mutex_lock(&m_mutex);
     if (m_pool.find(addr) == m_pool.end() || m_pool[addr].empty())

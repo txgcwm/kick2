@@ -4,10 +4,10 @@
 #include "ae_engine.h"
 #include "zmalloc.h"
 
-AeEngine::AeEngine()
+AeEngine::AeEngine(int size)
     :m_eventLoop(NULL)
 {
-    m_eventLoop = aeCreateEventLoop(1000);
+    m_eventLoop = aeCreateEventLoop(size);
 }
 AeEngine::~AeEngine()
 {

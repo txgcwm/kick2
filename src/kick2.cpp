@@ -17,16 +17,19 @@ HttpTask::HttpTask(std::string url, uint64_t now, HttpClient *client)
     StartMoment = DateTime::UnixTimeMs();
 }
 
-Kick2::Kick2()
-    :m_engine(NULL), m_memPool(NULL)
+int HttpTask::Launch()
 {
-    m_engine = new AeEngine();
+    return Client->SendGetReq(Url); 
+}
+
+Kick2::Kick2()
+    :m_memPool(NULL)
+{
     m_memPool = new MemPool();
 }
 
 void Kick2::Initialize(const Config &config)
 {
-    m_engine->Initialize();
     m_memPool->Initialize(512000000);
     m_config = config;
 }
@@ -34,23 +37,38 @@ void Kick2::Initialize(const Config &config)
 void Kick2::LaunchHlsLoad(const std::list<std::string> &playUrls)
 {
     assert(playUrls.size());
+    assert(m_config.ThreadNum);
     ConnectionPool *connectionPool = new ConnectionPool();
-    HttpClient client(m_engine, m_memPool, connectionPool);
-    client.Initialize();
-    HlsHandler *hlsHandler = new HlsHandler(m_engine);
-    client.RegisterHandler(string(MIME_DEFAULT), hlsHandler);
+    for (uint32_t i = 0; i < m_config.ThreadNum; ++i)
+    {
+        AeEngine *engine = new AeEngine(20000);
+        engine->Initialize();
+
+        HttpClient *client = new HttpClient(engine, m_memPool, connectionPool);
+        client->Initialize();
+        HlsHandler *hlsHandler = new HlsHandler(engine);
+        client->RegisterHandler(string(MIME_DEFAULT), hlsHandler);
+        
+        ThreadInfo *thread = new ThreadInfo();
+        thread->Engine = engine;
+        thread->Client = client;
+        m_threads.push_back(thread);
+    }
 
     uint64_t moment = DateTime::UnixTimeMs();
+    uint32_t load = m_config.Concurrency / m_config.ThreadNum;
     std::list<std::string>::const_iterator url = playUrls.begin();
     while (m_config.Concurrency > 0 && m_config.Concurrency > HlsTask::Concurrency)
     {
         moment = DateTime::UnixTimeMs();
-        HlsTask *task = new HlsTask(*url, moment, &client);
+        uint32_t index = (HlsTask::Concurrency / load) % m_config.ThreadNum;
+        HlsTask *task = new HlsTask(*url, moment, m_threads[index]->Client);
         srand(moment);
         task->TaskId = rand();
         if (url->find("save=true") || url->find("save=1") || m_config.IsDebug)
             task->NeedSave = true;
-        client.SendGetReq(task->PlayUrl, task);
+        //client.SendGetReq(task->PlayUrl, task);
+        task->Launch();
         if (m_config.IsDebug)
             break;
 
@@ -60,40 +78,63 @@ void Kick2::LaunchHlsLoad(const std::list<std::string> &playUrls)
         if (++url == playUrls.end())
             url = playUrls.begin();
     }
-    m_engine->Wait();
+    for (uint32_t i = 0; i < m_config.ThreadNum; ++i)
+    {
+        m_threads[i]->Engine->Wait();
+    }
 }
 
-void Kick2::LaunchHttpLoad(const std::list<std::string> &playUrls)
+void Kick2::LaunchHttpLoad(const std::list<std::string> &urls)
 {
-    assert(playUrls.size());
+    assert(urls.size());
+    assert(m_config.ThreadNum);
     ConnectionPool *connectionPool = new ConnectionPool();
-    HttpClient client(m_engine, m_memPool, connectionPool);
-    client.Initialize();
+    for (uint32_t i = 0; i < m_config.ThreadNum; ++i)
+    {
+        AeEngine *engine = new AeEngine(20000);
+        engine->Initialize();
+
+        HttpClient *client = new HttpClient(engine, m_memPool, connectionPool);
+        client->Initialize();
+
+        ThreadInfo *thread = new ThreadInfo();
+        thread->Engine = engine;
+        thread->Client = client;
+        m_threads.push_back(thread);
+    }
 
     uint64_t moment = DateTime::UnixTimeMs();
-    std::list<std::string>::const_iterator url = playUrls.begin();
+    uint32_t load = m_config.Concurrency / m_config.ThreadNum;
+    std::list<std::string>::const_iterator url = urls.begin();
     while (1)
     {
         moment = DateTime::UnixTimeMs();
-        HttpTask *task = new HttpTask(*url, moment, &client);
+        uint32_t index = (HlsTask::Concurrency / load) % m_config.ThreadNum;
+        HttpTask *task = new HttpTask(*url, moment, m_threads[index]->Client);
         if (url->find("save=true") || url->find("save=1") || m_config.IsDebug)
             task->NeedSave = true;
-        client.SendGetReq(*url, task);
+        //client.SendGetReq(*url, task);
+        task->Launch();
         if (m_config.IsDebug)
             break;
         int64_t sleeps = m_config.LaunchInterval - DateTime::UnixTimeMs() + moment;
         if (sleeps > 0)
             usleep(sleeps * 1000);
-        if (++url == playUrls.end())
-            url = playUrls.begin();
+        if (++url == urls.end())
+            url = urls.begin();
     }
-    m_engine->Wait();
+    for (uint32_t i = 0; i < m_config.ThreadNum; ++i)
+    {
+        m_threads[i]->Engine->Wait();
+    }
 }
 
 void Kick2::LaunchMulticastTest(const std::string &addr, const std::string &interface)
 {
     assert(!addr.empty());
-    MulticastClient client(m_engine);
+    AeEngine engine(20000);
+    engine.Initialize();
+    MulticastClient client(&engine);
     if (client.Receive(addr, interface) != -1)
-        m_engine->Wait();
+        engine.Wait();
 }

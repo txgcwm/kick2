@@ -36,7 +36,7 @@ static void usage() {
         "  Options:                                                        \n"
         "    -c, --concurrency        Concurrencys to keep open            \n"
         //"    -d, --duration           Duration of test                     \n"
-        //"    -t, --threads            Number of threads to use             \n"
+        "    -t, --threads            Number of threads to use             \n"
         //"                                                                  \n"
         "    -D, --debug              save debug log and response file     \n"
         "    -s, --script             Load script file with request urls   \n"

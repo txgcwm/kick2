@@ -71,7 +71,7 @@ void MemPool::Free(Block *buffer)
 int ReadToBuffer(Block &buffer, uint32_t offset, int fd, uint32_t len)
 {
     Block *block = &buffer;
-    uint32_t left = len;
+    int32_t left = len;
     while (left > 0 && Socket::IsReadable(fd))
     {
         while (offset >= block->Capacity)
@@ -81,7 +81,7 @@ int ReadToBuffer(Block &buffer, uint32_t offset, int fd, uint32_t len)
             assert(block);
         }
         char *buf = block->Data + offset;
-        size_t readOnce = left <= block->Capacity - offset ? left : block->Capacity - offset;
+        size_t readOnce = (uint32_t)left <= block->Capacity - offset ? left : block->Capacity - offset;
         size_t readSize = read(fd, buf, readOnce);
         block->Size += readSize;
         offset += readSize;
