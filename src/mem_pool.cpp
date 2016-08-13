@@ -29,9 +29,8 @@ Block *MemPool::Allocate(uint32_t size)
         Block *block;
         if (item->second.empty())
         {
-            char *buf = (char *)zmalloc(item->first);
-            block = new Block(buf, item->first);
-            DEBUG_LOG("MemPool::Allocate(), allocate new block, buf: "<<(void *)buf<<", size: "<<item->first);
+            block = new Block(item->first);
+            DEBUG_LOG("MemPool::Allocate(), allocate new block, buf: "<<(void *)block->Data<<", size: "<<item->first);
         }
         else
         {
@@ -68,7 +67,7 @@ void MemPool::Free(Block *buffer)
     }    
 }
 
-int ReadToBuffer(Block &buffer, uint32_t offset, int fd, uint32_t len)
+int ReadToBuffer(int fd, Block &buffer, uint32_t offset, uint32_t len)
 {
     Block *block = &buffer;
     int32_t left = len;
@@ -82,7 +81,9 @@ int ReadToBuffer(Block &buffer, uint32_t offset, int fd, uint32_t len)
         }
         char *buf = block->Data + offset;
         size_t readOnce = (uint32_t)left <= block->Capacity - offset ? left : block->Capacity - offset;
-        size_t readSize = read(fd, buf, readOnce);
+        int readSize = read(fd, buf, readOnce);
+        if (readSize < 0)
+            return -1;
         block->Size += readSize;
         offset += readSize;
         left -= readSize;

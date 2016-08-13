@@ -16,6 +16,12 @@ struct Block
     uint32_t Capacity;
     Block *Next;
 
+    Block(uint32_t capacity)
+        :Data(NULL), Size(0), Capacity(capacity), Next(NULL) 
+    {
+        Data = (char *)zmalloc(capacity);
+    }
+
     Block(char *data, uint32_t capacity)
         :Data(data), Size(0), Capacity(capacity), Next(NULL) {}
 };
@@ -33,7 +39,7 @@ private:
     std::map<uint32_t,std::list<Block *> > m_pool2;
 };
 
-int ReadToBuffer(Block &buffer, uint32_t offset, int fd, uint32_t len);
+int ReadToBuffer(int fd, Block &buffer, uint32_t offset, uint32_t len);
 
 #endif
 

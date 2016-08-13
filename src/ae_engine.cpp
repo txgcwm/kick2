@@ -28,21 +28,38 @@ int AeEngine::Main(void *arg)
 
 int AeEngine::AddIoEvent(int fd, int mask, ClientData *data)
 {
-    return aeCreateFileEvent(m_eventLoop, fd, mask, aeIoCallback, data);
+    int result = 0;
+    switch (mask)
+    {
+    case AE_READABLE:
+        result = aeCreateFileEvent(m_eventLoop, fd, AE_READABLE, aeIoReadCallback, data);
+        break;
+
+    case AE_WRITABLE:
+        result = aeCreateFileEvent(m_eventLoop, fd, AE_WRITABLE, aeIoWriteCallback, data);
+        break;
+
+    case AE_READABLE | AE_WRITABLE:
+        result = aeCreateFileEvent(m_eventLoop, fd, AE_READABLE, aeIoReadCallback, data);
+        if (result == AE_OK)
+            result = aeCreateFileEvent(m_eventLoop, fd, AE_WRITABLE, aeIoWriteCallback, data);
+        break;
+    }
+    return result;
 }
 
-void aeIoCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask)
+void aeIoReadCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask)
 {
     ClientData *data = (ClientData *)clientData;
     IIoEvent *ioCallbacker = (IIoEvent *)data->Callbacker;
-    if (mask&AE_READABLE)
-    {
-        ioCallbacker->OnRead(fd, data, mask);
-    }
-    if (mask&AE_WRITABLE)
-    {
-        ioCallbacker->OnWrite(fd, data, mask);
-    }
+    ioCallbacker->OnRead(fd, data, mask);
+}
+
+void aeIoWriteCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask)
+{
+    ClientData *data = (ClientData *)clientData;
+    IIoEvent *ioCallbacker = (IIoEvent *)data->Callbacker;
+    ioCallbacker->OnWrite(fd, data, mask);
 }
 
 void AeEngine::DeleteIoEvent(int fd, int mask)

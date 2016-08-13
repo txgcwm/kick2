@@ -14,6 +14,7 @@
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <errno.h>
 
 #include <sys/ioctl.h>
 
@@ -183,10 +184,9 @@ SOCKET Socket::Accept(struct sockaddr * addr, socklen_t * len)
 int Socket::Connect(const struct sockaddr *addr, int len)
 {
     int n;
-    if ((n = connect(m_sockfd, addr, len)) < 0)
+    if ((n = connect(m_sockfd, addr, len)) < 0 && errno != EINPROGRESS)
     {
-        //ERROR_LOG("Socket::Connect(), socket connect to: " << addr << " failed, fd: " << m_sockfd);
-        Close();
+        ERROR_LOG("Socket::Connect(), socket connect failed, fd: " << m_sockfd << ", errno: " << errno);
     }
     return n;
 }

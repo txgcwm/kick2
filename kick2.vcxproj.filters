@@ -81,6 +81,9 @@
     <ClCompile Include="src\network_helper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\file.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="reference\ae.h">
@@ -141,6 +144,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\network_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\File.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -57,7 +57,8 @@ private:
     aeEventLoop *m_eventLoop;
 };
 
-void aeIoCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
+void aeIoReadCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
+void aeIoWriteCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
 int aeTimeCallback(struct aeEventLoop *eventLoop, long long id, void *clientData);
 
 #endif

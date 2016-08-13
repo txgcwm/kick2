@@ -50,7 +50,9 @@ struct HlsTask
     HlsTask(std::string playUrl, uint64_t now, HttpClient *client);
     ~HlsTask();
 
-    inline int Launch() { return Client->SendGetReq(PlayUrl, this); }
+    inline int Launch() { return Download(PlayUrl); }
+    inline int Download(const std::string &url) { return Client->SendGetReq(Encrypt(url), this); }
+    std::string Encrypt(const std::string &url) { return url; }
 };
 
 class HlsHandler : public ITimerEvent, public IHttpHandler

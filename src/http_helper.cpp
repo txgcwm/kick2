@@ -9,8 +9,6 @@
 #include "http_parser_ext.h"
 #include "http_helper.h"
 
-#define HEADER_MAX_LENGTH 1024
-
 std::string HttpHelper::BuildGetReq(const std::string &url)
 {
     HttpParser parser;
@@ -24,15 +22,25 @@ std::string HttpHelper::BuildGetReq(const std::string &url)
         "\r\n", parsedUrl.ToUri().c_str(), parsedUrl.Host.c_str());
     return std::string(buf);
 }
+
+int HttpHelper::BuildGetReq(char *buf, uint32_t len, const char *host, const char *uri)
+{
+    return snprintf(buf, len, "GET %s HTTP/1.0\r\n"
+        "User-Agent: kick2\r\n"
+        "Connection: close\r\n"
+        "Host: %s\r\n"
+        "\r\n", uri, host);
+}
+
 std::string HttpHelper::BulidPostReq(const std::string &url, const std::string &data)
 {
     HttpParser parser;
     Url parsedUrl;
     parser.ParseUrl(url, parsedUrl);
     char buf[HEADER_MAX_LENGTH] = { 0 };
-    snprintf(buf, sizeof(buf), "POST %s HTTP/1.0\r\n"
+    snprintf(buf, sizeof(buf), "POST %s HTTP/1.1\r\n"
         "User-Agent: kick2\r\n"
-        "Connection: close\r\n"
+        "Connection: keep-alive\r\n"
         "Host: %s\r\n"
         "\r\n", parsedUrl.ToUri().c_str(), parsedUrl.Host.c_str());
     return std::string(buf) + data;

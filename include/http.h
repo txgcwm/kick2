@@ -61,22 +61,25 @@ struct HttpMsg
     uint64_t ContentLength;
     uint64_t Length;
     HttpMsg()
-        :Method(), Uri(), HttpVersion(), StatusCode(), State(0), Body(), 
+        :Method(), Uri(), HttpVersion(), StatusCode(), State(0), Body(), Buf(NULL),
         ContentLength(0), Length(0) {}
+    ~HttpMsg()
+    {}
 };
 
 struct Connection
 {
     std::string Host;
     uint16_t Port;
+    uint32_t Fd;
     HttpMsg *Request;
     HttpMsg *Response;
     uint64_t Read;
     uint64_t Written;
-    void *UserData;
+    void *Data;
 
-    Connection(const char *host, uint16_t port, HttpMsg *request, void *userData)
-        :Host(host), Port(port), Request(request), Response(NULL), Read(0), Written(0), UserData(userData) {}
+    Connection(const char *host, uint16_t port, uint32_t fd, HttpMsg *request, void *userData)
+        :Host(host), Port(port), Fd(fd), Request(request), Response(NULL), Read(0), Written(0), Data(userData) {}
 };
 
 #endif

@@ -44,10 +44,12 @@ void HlsHandler::Handle(Connection *connection, HttpClient *client, void *userDa
         response.Headers.at(string(HTTP_HEADER_CONTENT_TYPE)) == "application/x-www-form-urlencoded")
     {
         HandleM3u8Resp(connection, client, task);
+        DEBUG_LOG("download m3u8 successfully, uri: " << connection->Request->Uri);
     }
     else
     {
         HandleSegmentResp(connection, client, task);
+        DEBUG_LOG("download segment successfully, uri: " << connection->Request->Uri);
     }
 }
 
@@ -85,14 +87,14 @@ int HlsHandler::HandleM3u8Resp(Connection *connection, HttpClient *client, HlsTa
             task->NextMoment += item->Duration;
             ClientData *data = new ClientData(this, task);
             m_engine->AddTimerEvent(task->NextMoment - now, data);
-            client->SendGetReq(requestUrl, task);
+            task->Download(requestUrl);
         }
         else
         {
             item->FullUrl = requestUrl;
             task->TaskQueue.push_back(*item);
             DEBUG_LOG("[TaskId:" << task->TaskId << "] HlsHandler::Handle(), "
-                "queue add segment: " << requestUrl);
+                "hls task queue add segment: " << requestUrl);
         }
     }
     return 0;
@@ -209,7 +211,7 @@ void HlsHandler::ResumeTask(HlsTask *task)
         ClientData *data = new ClientData(this, task);
         m_engine->AddTimerEvent(task->NextMoment - DateTime::UnixTimeMs(), data);
     }
-    task->Client->SendGetReq(fullUrl, task);
+    task->Download(fullUrl);
 }
 
 void HlsHandler::OnTaskComplete(HlsTask *task)

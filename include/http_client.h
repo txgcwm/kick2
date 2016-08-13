@@ -46,11 +46,11 @@ public:
 public:
     void Initialize();
     int SendGetReq(const std::string &url, void *userData = NULL);
-    int SendMsg(const char *host, uint16_t port, const char *buf, uint64_t len, void *userData = NULL);
+    int SendMsgAsync(const char *host, uint16_t port, const char *buf, uint64_t len, void *userData = NULL);
     int HandleResponse(Connection *connection);
     virtual void OnRead (int fd, ClientData *data, int mask);
     virtual void OnWrite(int fd, ClientData *data, int mask);
-    virtual void OnError(int fd, ClientData *data, int mask);
+    int Close(Connection *connection, bool canReuse);
 
     void RegisterHandler(const string mime, IHttpHandler *handler);
 
