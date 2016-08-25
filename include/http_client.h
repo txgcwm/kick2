@@ -11,6 +11,7 @@
 #define RECVBUF 1024
 #define MIME_DEFAULT "MimeDefault"
 
+class MemPool;
 class HttpClient;
 
 struct IHttpHandler
@@ -22,8 +23,6 @@ class HttpRespHandler :public IHttpHandler
 {
     virtual void Handle(Connection *connection, HttpClient *client, void *userData);
 };
-
-class MemPool;
 
 class ConnectionPool
 {
@@ -50,6 +49,8 @@ public:
     int HandleResponse(Connection *connection);
     virtual void OnRead (int fd, ClientData *data, int mask);
     virtual void OnWrite(int fd, ClientData *data, int mask);
+
+    int Abort(Connection *connection);
     int Close(Connection *connection, bool canReuse);
 
     void RegisterHandler(const string mime, IHttpHandler *handler);

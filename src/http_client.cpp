@@ -1,6 +1,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <cstring>
 #include <assert.h>
 #include <errno.h>
 
@@ -15,11 +16,11 @@
 
 void HttpRespHandler::Handle(Connection *connection, HttpClient *client, void *userData)
 {
-    HttpMsg &response = *connection->Response;
-    DEBUG_LOG("HttpRespHandler::Handle(), "
-        "Content-Type: " << response.Headers.at(string(HTTP_HEADER_CONTENT_TYPE)) << 
-        " buf: " << (void *)response.Buf->Data << ", "
-        "Content-Length:" << response.Headers.at(string(HTTP_HEADER_CONTENT_LENGTH)));
+    //HttpMsg &response = *connection->Response;
+    //DEBUG_LOG("HttpRespHandler::Handle(), " <<
+    //    HTTP_HEADER_CONTENT_TYPE << response.Headers.at(string(HTTP_HEADER_CONTENT_TYPE)) << ", " <<
+    //    HTTP_HEADER_CONTENT_LENGTH << response.Headers.at(string(HTTP_HEADER_CONTENT_LENGTH)) <<
+    //    " buf: " << (void *)response.Buf->Data << ", ");
 }
 
 ConnectionPool::ConnectionPool()
@@ -145,17 +146,21 @@ void HttpClient::OnRead(int fd, ClientData *data, int mask)
         HttpMsg *response = connection->Response;
         if (response == NULL)
         {
+            Block *block = m_memPool->Allocate(RECVBUF);
+            if (block == NULL)
+                break;
             response = new HttpMsg();
-            response->Buf = m_memPool->Allocate(300);
+            response->Buf = block;
             connection->Response = response;
         }
         if (response->Length == 0)
         {
             int nread = ReadToBuffer(fd, *response->Buf, connection->Read, response->Buf->Capacity - connection->Read);
-            if (nread > 0 || errno == EINTR)
+            if (nread > 0)
                 connection->Read += nread;
-            else
+            else if (errno != EINTR)
             {
+                ERROR_LOG("HttpClient::OnRead(), read error. fd: " << fd << ", errno: " << errno);
                 Close(connection, false);
                 delete data;
                 break;
@@ -165,6 +170,13 @@ void HttpClient::OnRead(int fd, ClientData *data, int mask)
             {
                 DEBUG_LOG("HttpClient::OnRead(), shall create bigger than " << RECVBUF << " new buffer");
                 response->Buf->Next = m_memPool->Allocate(response->Length - RECVBUF);
+                if (response->Buf->Next == NULL)
+                {
+                    ERROR_LOG("HttpClient::OnRead(), allocate memory failed. fd: " << fd << ", errno: " << errno);
+                    Close(connection, false);
+                    delete data;
+                    break;
+                }
             }
         }
         if (response->Length > connection->Read&&Socket::IsReadable(fd))
@@ -235,6 +247,36 @@ int HttpClient::HandleResponse(Connection *connection)
         handler->Handle(connection, this, connection->Data);
 
     } while (0);
+    return 0;
+}
+
+int HttpClient::Abort(Connection *connection)
+{
+    assert(connection);
+    HttpMsg &response = *connection->Response;
+    close(connection->Fd);
+    m_engine->DeleteIoEvent(connection->Fd, AE_READABLE | AE_WRITABLE);
+
+    IHttpHandler *handler = NULL;
+    if (m_respHandlers.find(response.Headers[HTTP_HEADER_CONTENT_TYPE]) == m_respHandlers.end())
+    {
+        handler = m_respHandlers[string(MIME_DEFAULT)];
+    }
+    else
+    {
+        handler = m_respHandlers[response.Headers[HTTP_HEADER_CONTENT_TYPE]];
+    }
+    assert(handler);
+    handler->Handle(connection, this, connection->Data);
+
+    if (connection->Request)
+        delete connection->Request;
+    if (connection->Response)
+    {
+        m_memPool->Free(connection->Response->Buf);
+        delete connection->Response;
+    }
+    delete connection;
     return 0;
 }
 

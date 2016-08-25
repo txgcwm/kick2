@@ -3,9 +3,7 @@
 #define __HTTP_PARSER_EXT_H__
 
 #include <string>
-#include <cstring>
 
-#include "common.h"
 #include "http.h"
 #include "http_parser.h"
 

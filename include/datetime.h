@@ -3,7 +3,7 @@
 #define __DATETIME_H__
 
 #include <string>
-#include <inttypes.h>
+#include <stdint.h>
 
 // 1601年1月1日から1970年1月1日までの通算100ナノ秒
 #define UNIXTIME_BASE	((_int64)0x019db1ded53e8000)

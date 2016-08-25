@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <cstring>
 
 #include "http_parser_ext.h"
 #include "mem_pool.h"

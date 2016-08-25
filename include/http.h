@@ -4,10 +4,10 @@
 
 #include <map>
 #include <string>
-#include <inttypes.h>
+#include <stdint.h>
 
 #define HTTP_HEADER_CONTENT_LENGTH "Content-Length"
-#define HTTP_HEADER_CONTENT_TYPE "Content-Type"
+#define HTTP_HEADER_CONTENT_TYPE   "Content-Type"
 
 struct Url
 {

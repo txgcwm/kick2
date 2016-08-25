@@ -5,7 +5,7 @@
 #include <list>
 #include <vector>
 #include <string>
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "ae_engine.h"
 
@@ -22,6 +22,7 @@ struct Config
     uint64_t Duration;
     uint64_t ThreadNum;
     uint64_t LaunchInterval;
+    uint64_t UseMemoryMax;
     enum LodeType ReqType;
     std::string ScriptFile;
     std::string Url;

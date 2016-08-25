@@ -4,8 +4,6 @@
 
 #include <string>
 
-#include "http.h"
-
 #define HEADER_MAX_LENGTH 1024
 
 class HttpHelper

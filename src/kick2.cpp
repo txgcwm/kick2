@@ -30,7 +30,7 @@ Kick2::Kick2()
 
 void Kick2::Initialize(const Config &config)
 {
-    m_memPool->Initialize(512000000);
+    m_memPool->Initialize(config.UseMemoryMax);
     m_config = config;
 }
 
@@ -67,7 +67,6 @@ void Kick2::LaunchHlsLoad(const std::list<std::string> &playUrls)
         task->TaskId = rand();
         if (url->find("save=true") || url->find("save=1") || m_config.IsDebug)
             task->NeedSave = true;
-        //client.SendGetReq(task->PlayUrl, task);
         task->Launch();
         if (m_config.IsDebug)
             break;
@@ -113,7 +112,6 @@ void Kick2::LaunchHttpLoad(const std::list<std::string> &urls)
         HttpTask *task = new HttpTask(*url, moment, m_threads[index]->Client);
         if (url->find("save=true") || url->find("save=1") || m_config.IsDebug)
             task->NeedSave = true;
-        //client.SendGetReq(*url, task);
         task->Launch();
         if (m_config.IsDebug)
             break;

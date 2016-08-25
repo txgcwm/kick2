@@ -3,7 +3,7 @@
 #define __HLS_HANDLER_H__
 
 #include <list>
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "mem_pool.h"
 #include "ae_engine.h"
@@ -19,7 +19,7 @@ enum HlsFileType
 struct SegmentInfo
 {
     HlsFileType FileType;
-    int Duration;
+    int32_t Duration;
     std::string Uri;
     std::string FullUrl;
     SegmentInfo()

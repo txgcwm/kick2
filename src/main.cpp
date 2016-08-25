@@ -14,7 +14,7 @@
 #include "kick2.h"
 #include "string_helper.h"
 
-#define VERSION "0.1.0"
+#define VERSION "0.1.1"
 
 static struct option longopts[] = {
     { "duration",            required_argument, NULL, 'd' },
@@ -25,6 +25,7 @@ static struct option longopts[] = {
     { "debug",               no_argument,       NULL, 'D' },
     { "hls",                 no_argument,       NULL, 'H' },
     { "multicast",           no_argument,       NULL, 'm' },
+    { "use-memory-max",      required_argument, NULL, 'u' },
     { "timeout",             required_argument, NULL, 'T' },
     { "help",                no_argument,       NULL, 'h' },
     { "version",             no_argument,       NULL, 'v' },
@@ -44,6 +45,7 @@ static void usage() {
         "    -l, --launch-interval    Launch a new task interval           \n"
         "    -H, --hls                Launch hls load test                 \n"
         "    -m, --multicast          Launch multicast receiver [debug]    \n"
+        "    -u, --use-memory-max     Set use memory max [MB]              \n"
         //"    -T, --timeout            Socket/request timeout               \n"
         "    -v, --version            Print version details                \n");
 }
@@ -54,6 +56,7 @@ int parseArgs(int argc, char **argv, Config &config)
     config.Duration       = 0;
     config.ThreadNum      = 1;
     config.LaunchInterval = 10;
+    config.UseMemoryMax   = 1 * 1024 * 1024 * 1024;
     
     config.ReqType = HTTP_LOAD;
     config.IsDebug = false;
@@ -61,7 +64,7 @@ int parseArgs(int argc, char **argv, Config &config)
     config.Interface = "any";
 
     int c;
-    while ((c = getopt_long(argc, argv, "c:t:d:l:s:i:T:HDmhv?", longopts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "c:t:d:l:s:i:T:u:HDmhv?", longopts, NULL)) != -1) {
         switch (c) {
         case 'c':
             if(!config.IsDebug)
@@ -81,6 +84,9 @@ int parseArgs(int argc, char **argv, Config &config)
             break;
         case 's':
             config.ScriptFile = optarg;
+            break;
+        case 'u':
+            config.UseMemoryMax = STR::Str2UInt64(optarg) * 1024 * 1024;
             break;
         case 'i':
             config.Interface = optarg;

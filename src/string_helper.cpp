@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "common.h"
 #include "string_helper.h"
 
 std::string STR::GetKeyValue(const std::string &source, const std::string left, const std::string right)
@@ -71,5 +70,10 @@ std::string STR::ToString(long long value)
 uint64_t STR::Str2UInt64(std::string value)
 {
     return atoll(value.c_str());
+}
+
+double STR::Str2Double(std::string value)
+{
+    return atof(value.c_str());
 }
 

@@ -4,7 +4,8 @@
 
 #include <map>
 #include <list>
-#include <inttypes.h>
+#include <stdint.h>
+
 #include "zmalloc.h"
 
 #define INITIAL_BLOCK_SIZE 64*1024*1024
@@ -24,10 +25,18 @@ struct Block
 
     Block(char *data, uint32_t capacity)
         :Data(data), Size(0), Capacity(capacity), Next(NULL) {}
+
+    ~Block()
+    {
+        zfree(Data);
+    }
 };
 
 class MemPool
 {
+public:
+    MemPool();
+
 public:
     int Initialize(uint64_t initialSize);
     Block *Allocate(uint32_t size);
@@ -35,8 +44,9 @@ public:
 
 private:
     std::map<uint32_t /*offset*/, Block *> m_basePool;
-    std::list<Block *>m_pool;
+    std::list<Block *> m_pool;
     std::map<uint32_t,std::list<Block *> > m_pool2;
+    uint64_t m_maxMemory;
 };
 
 int ReadToBuffer(int fd, Block &buffer, uint32_t offset, uint32_t len);

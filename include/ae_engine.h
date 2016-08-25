@@ -3,8 +3,6 @@
 #ifndef __AE_ENGINE_H__
 #define __AE_ENGINE_H__
 
-#include <time.h>
-
 #include "ae.h"
 #include "thread.h"
 
@@ -20,14 +18,14 @@ struct ClientData
 
 struct IIoEvent
 {
-    virtual void OnRead (int fd, ClientData *userData, int mask) = 0;
-    virtual void OnWrite(int fd, ClientData *userData, int mask) = 0;
+    virtual void OnRead (int fd, ClientData *data, int mask) = 0;
+    virtual void OnWrite(int fd, ClientData *data, int mask) = 0;
 };
 
 class ITimerEvent
 {
 public:
-    virtual int  OnTimer(long long id, ClientData *userData)     = 0;
+    virtual int  OnTimer(long long id, ClientData *data)     = 0;
 };
 
 class AeEngine :public Thread
@@ -57,8 +55,8 @@ private:
     aeEventLoop *m_eventLoop;
 };
 
-void aeIoReadCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
+void aeIoReadCallback (struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
 void aeIoWriteCallback(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
-int aeTimeCallback(struct aeEventLoop *eventLoop, long long id, void *clientData);
+int  aeTimeCallback(struct aeEventLoop *eventLoop, long long id, void *clientData);
 
 #endif

@@ -84,6 +84,9 @@
     <ClCompile Include="src\file.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\log.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="reference\ae.h">
@@ -99,9 +102,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\http.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\log.h">
@@ -146,7 +146,7 @@
     <ClInclude Include="include\network_helper.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\File.h">
+    <ClInclude Include="include\file.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -143,6 +143,7 @@
     <ClCompile Include="src\http_helper.cpp" />
     <ClCompile Include="src\http_parser_ext.cpp" />
     <ClCompile Include="src\kick2.cpp" />
+    <ClCompile Include="src\log.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mem_pool.cpp" />
     <ClCompile Include="src\multicast_client.cpp" />
@@ -155,9 +156,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ae_engine.h" />
-    <ClInclude Include="include\common.h" />
     <ClInclude Include="include\datetime.h" />
-    <ClInclude Include="include\File.h" />
+    <ClInclude Include="include\file.h" />
     <ClInclude Include="include\hls_handler.h" />
     <ClInclude Include="include\http.h" />
     <ClInclude Include="include\http_client.h" />

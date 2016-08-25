@@ -147,7 +147,9 @@ void MulticastClient::OnRead(int fd, ClientData *clientData, int mask)
 {
     MulticastInfo *info = (MulticastInfo *)clientData->UserData;
     char buf[8096] = { 0 };
-    size_t completed = read(fd, buf, sizeof(buf));
+    ssize_t completed = read(fd, buf, sizeof(buf));
+    if (completed < 0)
+        return;
     std::string multicastAddr;
     if (info->Source.empty())
         multicastAddr = std::string("udp://") + info->Multicast + ":" + STR::ToString(info->Port);

@@ -1,9 +1,11 @@
 
 #include <iostream>
+#include <cstring>
 
 #include <assert.h>
 
 #include "log.h"
+#include "file.h"
 #include "datetime.h"
 #include "string_helper.h"
 #include "http_helper.h"
@@ -138,7 +140,7 @@ int HlsHandler::ParseM3u8(const Block &buffer, M3u8Info &m3u8Info)
         else if (strncmp(pos, "#EXTINF", 7) == 0)
         {
             strBuf = STR::GetKeyValue(line, "#EXTINF:", ",");
-            segmentInfo.Duration = STR::Str2UInt64(strBuf) * 1000;
+            segmentInfo.Duration = (int32_t)STR::Str2Double(strBuf) * 1000;
             segmentInfo.FileType = TsType;
             if (!next || *(next + 1) == 0x0)
                 break;
@@ -176,9 +178,33 @@ int HlsHandler::HandleSegmentResp(Connection *connection, HttpClient *client, Hl
 {
     DEBUG_LOG("HlsHandler::HandleSegmentResp(), uri: "<<connection->Request->Uri);
     std::string resourceName = STR::GetRKeyValue(connection->Request->Uri, "/", "?");
-    std::string fileName = std::string("./") + resourceName;
+    std::string currentPath;
+    File::GetCurrentPath(currentPath);
+    std::string storePath = currentPath + STR::ToString(task->TaskId) + "/";
+    if (!File::Exist(storePath))
+        File::CreateDirectory(storePath);
+    std::string fileName = storePath + resourceName;
     DEBUG_LOG("[TaskId:" << task->TaskId << "] HlsHandler::Handle(), "
         "the segment has got, filename: " << fileName);
+
+    if (task->NeedSave)
+    {
+        File::Create(fileName);
+        Block *block = connection->Response->Buf;
+        int32_t offset= connection->Response->Body.Offset;
+        while (block &&  offset >= (int32_t)block->Size)
+        {
+            offset -= block->Size;
+            block = block->Next;
+        }
+        int32_t writen = File::WriteSync(fileName.c_str(), 0, block->Size - offset, block->Data + offset);
+        block = block->Next;
+        while (block)
+        {
+            writen = File::WriteSync(fileName.c_str(), writen, block->Size, block->Data);
+            block = block->Next;
+        }
+    }
     return 0;
 }
 

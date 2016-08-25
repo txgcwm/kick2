@@ -8,9 +8,12 @@
 #include "socket.h"
 #include "mem_pool.h"
 
+MemPool::MemPool()
+    :m_maxMemory(0) {}
 
-int MemPool::Initialize(uint64_t initialSize)
+int MemPool::Initialize(uint64_t maxMemory)
 {
+    m_maxMemory = maxMemory;
     uint32_t sizes[] = { 1024,10240,102400,1024000,2048000,5120000, };
     for (uint32_t i = 0; i < sizeof(sizes)/sizeof(uint32_t); ++i)
         m_pool2.insert(std::pair<uint32_t, std::list<Block *> >(sizes[i], std::list<Block *>()));
@@ -29,6 +32,10 @@ Block *MemPool::Allocate(uint32_t size)
         Block *block;
         if (item->second.empty())
         {
+            if (m_maxMemory > 0 && zmalloc_used_memory() > m_maxMemory)
+            {
+                return NULL;
+            }
             block = new Block(item->first);
             DEBUG_LOG("MemPool::Allocate(), allocate new block, buf: "<<(void *)block->Data<<", size: "<<item->first);
         }
@@ -61,6 +68,7 @@ void MemPool::Free(Block *buffer)
             block->Capacity = item->first;
         }       
         memset(block->Data, 0, block->Capacity);
+        block->Size = 0;
         item->second.push_back(block);
         //DEBUG_LOG("MemPool::Free(), free block, buf: " << (void *)block->Data << ", size: " << item->first);
         block = block->Next;

@@ -1,6 +1,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include <assert.h>
 #include <netdb.h>
