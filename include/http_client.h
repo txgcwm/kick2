@@ -16,6 +16,7 @@ class HttpClient;
 
 struct IHttpHandler
 {
+	virtual ~IHttpHandler() {}
     virtual void Handle(Connection *connection, HttpClient *client, void *userData) = 0;
 };
 
